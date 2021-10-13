@@ -79,6 +79,7 @@ class RBM(nn.Module):
 # %%
 import numpy as np
 import pandas as pd
+import scipy
 import sklearn
 import gzip
 import json
@@ -120,14 +121,81 @@ user_reviews = 'australian_user_reviews.json.gz'
 game_bundles = 'bundle_data.json.gz'
 steam_reviews= 'steam_reviews.json.gz'
 
-for dataset in [metadata_games, user_items, user_reviews, game_bundles, steam_reviews]:
+# for dataset in [metadata_games, user_items, user_reviews, game_bundles, steam_reviews]:
+for dataset in [user_reviews]:
   print(f"----- {dataset}-----")
   size = os.path.getsize(steam_path + dataset) 
   print(f'Size of file is {size / 1000000}MB')
-  df_metadata = parse_json(steam_path + dataset, read_max=1000)
+  df_metadata = parse_json(steam_path + dataset)
   pd.set_option('display.max_colwidth', None)
-  display(df_metadata.head(0))
-  # display(df_metadata.describe(include='all'))
+  display(df_metadata.head(5))
+#   display(df_metadata.describe(include='all'))
 
 
 # %%
+steam_reviews_df = parse_json(steam_path + steam_reviews, read_max=20000)
+steam_reviews_df = steam_reviews_df[['user_id', 'product_id', 'recommended']]
+
+# %% Drop unusable rows
+steam_reviews_df_cleaned = steam_reviews_df.dropna(axis=0, subset=['user_id'])
+
+# %% 
+user_reviews_df = parse_json(steam_path + user_reviews)
+# %%
+user_reviews_df_exploded = user_reviews_df.explode('reviews')
+user_reviews_df_exploded = user_reviews_df_exploded.dropna()
+# %%
+def func(x):
+    return x['recommend'], x["item_id"]
+
+user_reviews_df_exploded['recommended'], user_reviews_df_exploded["item_id"] = zip(
+    *user_reviews_df_exploded['reviews'].map(func)
+)
+# %% row per review
+user_reviews_df_exploded.reset_index()
+user_reviews_df_exploded = user_reviews_df_exploded[['user_id', 'item_id', 'recommended']]
+
+# %% Quick check if there are any negative reviews 
+enkeltrue = user_reviews_df[['reviews']].apply(lambda x: [elem['recommend'] for elem in x['reviews']], axis=1)
+enkeltrue.loc[enkeltrue.map(set).map(len) > 1]
+
+# %%
+dct = {}
+def map_to_consecutive_id(uuid):
+  if uuid in dct:
+    return dct[uuid]
+  else:
+    id = len(dct)
+    dct[uuid] = id
+    return id
+user_reviews_df_exploded['item_id_int'] = user_reviews_df_exploded['item_id'].progress_apply(map_to_consecutive_id)
+user_reviews_df_exploded.dtypes
+
+# %%
+user_reviews_df_grouped = user_reviews_df_exploded.groupby('user_id').agg(list)
+user_reviews_df_grouped = user_reviews_df_grouped.reset_index()
+
+# %% convert user id to unique int
+dct = {}
+user_reviews_df_grouped['user_id_int'] = user_reviews_df_grouped['user_id'].progress_apply(map_to_consecutive_id)
+
+
+# %% 
+#Create scipy csr matrix
+
+shape = (user_reviews_df_grouped['user_id_int'].max() + 1, user_reviews_df_exploded['item_id_int'].max() + 1)
+
+user_ids = []
+item_ids = []
+for idx, row in user_reviews_df_grouped.iterrows():
+    items = row['item_id_int']
+    user = row['user_id_int']
+    user_ids.extend([user] * len(items))
+    item_ids.extend(items)
+#create csr matrix
+values = np.ones(len(user_ids))
+matrix = scipy.sparse.csr_matrix((values, (user_ids, item_ids)), shape=shape, dtype=np.int32)
+
+
+# %%
+matrix
