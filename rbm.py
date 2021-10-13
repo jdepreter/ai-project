@@ -32,9 +32,11 @@ class RBM(nn.Module):
         # torch.mm make the product of 2 tensors
         # W.t() take the transpose because W is used for the p_v_given_h
         wx = torch.mm(x, self.W.t())
+        # print(wx.shape)
 
         # Expand the mini-batch
         activation = wx + self.h_bias.expand_as(wx)
+        # print(activation.shape)
 
         # Calculate the probability p_h_given_v
         p_h_given_v = torch.sigmoid(activation)
@@ -141,6 +143,7 @@ steam_reviews_df_cleaned = steam_reviews_df.dropna(axis=0, subset=['user_id'])
 
 # %% 
 user_reviews_df = parse_json(steam_path + user_reviews)
+user_reviews_df = user_reviews_df.drop_duplicates(subset='user_id')
 # %%
 user_reviews_df_exploded = user_reviews_df.explode('reviews')
 user_reviews_df_exploded = user_reviews_df_exploded.dropna()
@@ -191,10 +194,11 @@ values = []
 for idx, row in user_reviews_df_grouped.iterrows():
     items = row['item_id_int']
     user = row['user_id_int']
+
     recommended = row['recommended']
     user_ids.extend([user] * len(items))
     item_ids.extend(items)
-    values.extend([1 if recommended[i] else -1 for i in range(len(items))])
+    values.extend([1 if recommended[i] else 0 for i in range(len(items))])
 #create csr matrix
 # values = np.ones(len(user_ids))
 matrix = scipy.sparse.csr_matrix((values, (user_ids, item_ids)), shape=shape, dtype=np.int32)
@@ -204,15 +208,73 @@ matrix = scipy.sparse.csr_matrix((values, (user_ids, item_ids)), shape=shape, dt
 matrix
 
 
-
 # %% RBM init
+print('-------')
 n_vis = shape[1]
-n_hidden = 100
+n_hidden = 12
 batch_size = 128
 
 rbm = RBM(n_vis, n_hidden)
 
+# https://stackoverflow.com/questions/40896157/scipy-sparse-csr-matrix-to-tensorflow-sparsetensor-mini-batch-gradient-descent
+def convert_sparse_matrix_to_sparse_tensor(X):
+    for userid in range(len(X.indptr) - 1):
+        row = X[userid]
+        for i in range(len(row.data)):
+            value = row.data[i]
+            item = row.indices[i]
+            if value > 1:
+                print(value, item, userid)
+
+    coo = X.tocoo()
+
+    values = coo.data
+    indices = np.vstack((coo.row, coo.col))
+
+    i = torch.LongTensor(indices)
+    v = torch.FloatTensor(values)
+    print(values)
+    print("values", v)
+    shape = coo.shape
+
+    return torch.sparse.FloatTensor(i, v, torch.Size(shape))
+
 for epoch in range(5):
     for user_id in range(0, shape[0] - batch_size, batch_size):
-        training_sample = matrix
+        training_sample = matrix[user_id : user_id + batch_size]
+        training_sample2 = matrix[user_id : user_id + batch_size]
+        # print(training_sample)
+        v0 = convert_sparse_matrix_to_sparse_tensor(training_sample)
+        vk = convert_sparse_matrix_to_sparse_tensor(training_sample2)
 
+        v0list = v0.to_dense()
+        for row, sublist in enumerate(v0list):
+            for col, elem in enumerate(sublist):
+                if elem > 1:
+                    print(row, col, elem)
+        ph0, _ = rbm.sample_h(v0)   
+
+        # Third for loop - perform contrastive divergence
+        for k in range(10):
+            _, hk = rbm.sample_h(vk)
+            _, vk = rbm.sample_v(hk)
+
+            for row, sublist in enumerate(vk.tolist()):
+                for col, elem in enumerate(sublist):
+                    if elem > 1:
+                        print(row, col, elem)
+
+            # We don't want to learn when there is no rating by the user, and there is no update when rating = -1
+            # vk[v0 < 0] = v0[v0 < 0]
+            # print(k)
+
+        phk, _ = rbm.sample_h(vk)
+
+        print((torch.mm(v0.t(), ph0) - torch.mm(vk.t(), phk)).t().shape)
+        print(torch.sum((-vk + v0), 0).shape)
+        print(torch.sum((ph0 - phk), 0).shape)
+        break
+    break
+
+
+# %%
