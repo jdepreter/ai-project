@@ -187,15 +187,32 @@ shape = (user_reviews_df_grouped['user_id_int'].max() + 1, user_reviews_df_explo
 
 user_ids = []
 item_ids = []
+values = []
 for idx, row in user_reviews_df_grouped.iterrows():
     items = row['item_id_int']
     user = row['user_id_int']
+    recommended = row['recommended']
     user_ids.extend([user] * len(items))
     item_ids.extend(items)
+    values.extend([1 if recommended[i] else -1 for i in range(len(items))])
 #create csr matrix
-values = np.ones(len(user_ids))
+# values = np.ones(len(user_ids))
 matrix = scipy.sparse.csr_matrix((values, (user_ids, item_ids)), shape=shape, dtype=np.int32)
 
 
 # %%
 matrix
+
+
+
+# %% RBM init
+n_vis = shape[1]
+n_hidden = 100
+batch_size = 128
+
+rbm = RBM(n_vis, n_hidden)
+
+for epoch in range(5):
+    for user_id in range(0, shape[0] - batch_size, batch_size):
+        training_sample = matrix
+
