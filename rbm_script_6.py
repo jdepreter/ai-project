@@ -285,7 +285,7 @@ def score_model(rbm, batch_size):
             vt = vt.cuda()
         if len(vt[vt > -1]) > 0:
             _, h = rbm.sample_h(v)
-            _, v = rbm.sample_v(h)
+            v, _ = rbm.sample_v(h)
 
             # Update test RMSE reconstruction error
             test_recon_error += torch.sqrt(torch.mean((vt[vt > -1] - v[vt > -1])**2)) * len(vt > -1)
@@ -345,7 +345,7 @@ for epoch in tqdm(range(epochs)):
         # TODO misschien is iets lager proberen?
         for k in range(10):
             _, hk = rbm.sample_h(vk)
-            _, vk = rbm.sample_v(hk)
+            vk, _ = rbm.sample_v(hk)
 
             # We don't want to learn when there is no rating by the user, and there is no update when rating = -1
             # Remove indices from vk vector that are not in the v0 vector => get sparse tensor again
@@ -383,7 +383,7 @@ plt.plot(torch.Tensor(train_errors, device='cpu'), label="train")
 plt.plot(torch.Tensor(test_errors, device='cpu'), label="test")
 plt.ylabel('Error')
 plt.xlabel('Epoch')
-plt.savefig(f'test_base-{batch_size}-{epochs}.jpg')
+plt.savefig(f'test6-{batch_size}-{epochs}.jpg')
 
 # Evaluate the RBM on test set
 # test_recon_error = score_model(rbm)
