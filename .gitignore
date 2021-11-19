@@ -1,5 +1,8 @@
 .vscode
 /data
+/output/Thrash
+network
+item_dct.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
