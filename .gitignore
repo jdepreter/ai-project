@@ -3,6 +3,7 @@
 /output/Thrash
 network
 item_dct.json
+/*.jpg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

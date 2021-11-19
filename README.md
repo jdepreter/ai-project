@@ -1,4 +1,12 @@
-# ai-project
+# Restricted Boltzmann Machines for recommending Steam games
+
+## Project Layout
+- `output` folder contains RMSE plots for the train set (and sometimes also the test set) for all our experiments
+in selecting different hyperparamaters
+- `scripts` folder contains script versions of different ways of training the RBM, purely experimental do not use
+- `len-scripts` contains (slightly modified) tutorial scripts provided by Len
+- `rbm_notebook.ipynb` contains all code needed to read the Australian Steam dataset, train an RBM and evaluate is using HR@k, Recall@k and nDCG@k.
+- other files can be ignored for now
 
 ## Overview
 Pipelines:
