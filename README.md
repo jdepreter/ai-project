@@ -5,7 +5,8 @@
 in selecting different hyperparamaters
 - `scripts` folder contains script versions of different ways of training the RBM, purely experimental do not use
 - `len-scripts` contains (slightly modified) tutorial scripts provided by Len
-- `rbm_notebook.ipynb` contains all code needed to read the Australian Steam dataset, train an RBM and evaluate is using HR@k, Recall@k and nDCG@k.
+- `ANN_notebook_inventory_rating.ipynb` contains all code needed to read the cleaned Australian Steam dataset, train an ANN and evaluate it using HR@k, Recall@k and nDCG@k.
+- `rbm_notebook_inventory_rating.ipynb` contains all code needed to read the cleaned Australian Steam dataset, train an RBM and evaluate it using HR@k, Recall@k and nDCG@k
 - other files can be ignored for now
 
 ## Overview
