@@ -17,6 +17,7 @@ import math
 import torch 
 import torch.nn as nn
 tqdm.pandas() #for progres_apply etc.
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 # %%
 def parse_probe():
@@ -112,6 +113,11 @@ train_matrix
 
 # %% [markdown]
 # # RBM
+
+# %%
+import gc
+gc.collect()
+torch.cuda.empty_cache()
 
 # %%
 # https://github.com/khanhnamle1994/MetaRec/blob/b5e36cb579a88b32cdfb728f35f645d76b24ad95/Boltzmann-Machines-Experiments/RBM-CF-PyTorch/rbm.py#L23

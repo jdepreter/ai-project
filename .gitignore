@@ -5,6 +5,7 @@ network
 item_dct.json
 /*.jpg
 /netflix
+output/ANN/failures
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
